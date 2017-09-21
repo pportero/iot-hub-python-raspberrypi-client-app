@@ -160,13 +160,10 @@ def iothub_client_init():
     # to enable MQTT logging set to 1
     if client.protocol == IoTHubTransportProvider.MQTT:
         client.set_option("logtrace", 0)
-    client.set_message_callback(
-        receive_message_callback, RECEIVE_CONTEXT)
+    client.set_message_callback(receive_message_callback, RECEIVE_CONTEXT)
     if client.protocol == IoTHubTransportProvider.MQTT or client.protocol == IoTHubTransportProvider.MQTT_WS:
-        client.set_device_twin_callback(
-            device_twin_callback, TWIN_CONTEXT)
-        client.set_device_method_callback(
-            device_method_callback, METHOD_CONTEXT)
+        client.set_device_twin_callback(device_twin_callback, TWIN_CONTEXT)
+        client.set_device_method_callback(device_method_callback, METHOD_CONTEXT)
     return client
 
 
@@ -216,11 +213,14 @@ def iothub_client_sample_run():
                 prop_map = message.properties()
                 prop_map.add("temperatureAlert", "true" if temperature > TEMPERATURE_ALERT else "false")
 
-                client.send_event_async(message, send_confirmation_callback, MESSAGE_COUNT)
-                print ( "IoTHubClient.send_event_async accepted message [%d] for transmission to IoT Hub." % MESSAGE_COUNT )
+                #eog
+                #client.send_event_async(message, send_confirmation_callback, MESSAGE_COUNT)
+                #eog
+                #print ( "IoTHubClient.send_event_async accepted message [%d] for transmission to IoT Hub." % MESSAGE_COUNT )
 
                 status = client.get_send_status()
-                print ( "Send status: %s" % status )
+                #eog
+                #print ( "Send status: %s" % status )
                 MESSAGE_COUNT += 1
             time.sleep(config.MESSAGE_TIMESPAN / 1000.0)
 
