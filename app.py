@@ -55,8 +55,8 @@ PROTOCOL = IoTHubTransportProvider.MQTT
 # "HostName=<host_name>;DeviceId=<device_id>;SharedAccessKey=<device_key>"
 telemetry = Telemetry()
 
-if len(sys.argv) < 2:
-    print ( "You need to provide the device connection string as command line arguments." )
+if len(sys.argv) < 3:
+    print ( "You need to provide the <device connection string> and the <name of device> as command line arguments." )
     telemetry.send_telemetry_data(None, EVENT_FAILED, "Device connection string is not provided")
     sys.exit(0)
 
@@ -68,13 +68,14 @@ def is_correct_connection_string():
         return False
 
 CONNECTION_STRING = sys.argv[1]
+DEVICE_NAME = sys.argv[2]
 
 if not is_correct_connection_string():
     print ( "Device connection string is not correct." )
     telemetry.send_telemetry_data(None, EVENT_FAILED, "Device connection string is not correct.")
     sys.exit(0)
 
-MSG_TXT = "{\"deviceId\": \"Raspberry Pi - Python\",\"temperature\": %f,\"humidity\": %f}"
+MSG_TXT = "{\"deviceId\": \"RaspPi-Py-"+DEVICE_NAME+"\",\"temperature\": %f,\"humidity\": %f}"
 
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(config.GPIO_PIN_ADDRESS, GPIO.OUT)
@@ -152,6 +153,7 @@ def blob_upload_conf_callback(result, user_context):
 def iothub_client_init():
     # prepare iothub client
     client = IoTHubClient(CONNECTION_STRING, PROTOCOL)
+    client.set_option("product_info", "HappyPath_RaspberryPi-Python")
     if client.protocol == IoTHubTransportProvider.HTTP:
         client.set_option("timeout", TIMEOUT)
         client.set_option("MinimumPollingTime", MINIMUM_POLLING_TIME)
@@ -160,10 +162,13 @@ def iothub_client_init():
     # to enable MQTT logging set to 1
     if client.protocol == IoTHubTransportProvider.MQTT:
         client.set_option("logtrace", 0)
-    client.set_message_callback(receive_message_callback, RECEIVE_CONTEXT)
+    client.set_message_callback(
+        receive_message_callback, RECEIVE_CONTEXT)
     if client.protocol == IoTHubTransportProvider.MQTT or client.protocol == IoTHubTransportProvider.MQTT_WS:
-        client.set_device_twin_callback(device_twin_callback, TWIN_CONTEXT)
-        client.set_device_method_callback(device_method_callback, METHOD_CONTEXT)
+        client.set_device_twin_callback(
+            device_twin_callback, TWIN_CONTEXT)
+        client.set_device_method_callback(
+            device_method_callback, METHOD_CONTEXT)
     return client
 
 
@@ -188,7 +193,7 @@ def iothub_client_sample_run():
             reported_state = "{\"newState\":\"standBy\"}"
             client.send_reported_state(reported_state, len(reported_state), send_reported_state_callback, SEND_REPORTED_STATE_CONTEXT)
 
-        if not config.SIMULATED_DATA:        
+        if not config.SIMULATED_DATA:
             sensor = BME280(address = config.I2C_ADDRESS)
         else:
             sensor = BME280SensorSimulator()
@@ -213,14 +218,11 @@ def iothub_client_sample_run():
                 prop_map = message.properties()
                 prop_map.add("temperatureAlert", "true" if temperature > TEMPERATURE_ALERT else "false")
 
-                #eog
-                #client.send_event_async(message, send_confirmation_callback, MESSAGE_COUNT)
-                #eog
-                #print ( "IoTHubClient.send_event_async accepted message [%d] for transmission to IoT Hub." % MESSAGE_COUNT )
+                client.send_event_async(message, send_confirmation_callback, MESSAGE_COUNT)
+                print ( "IoTHubClient.send_event_async accepted message [%d] for transmission to IoT Hub." % MESSAGE_COUNT )
 
                 status = client.get_send_status()
-                #eog
-                #print ( "Send status: %s" % status )
+                print ( "Send status: %s" % status )
                 MESSAGE_COUNT += 1
             time.sleep(config.MESSAGE_TIMESPAN / 1000.0)
 
@@ -239,9 +241,11 @@ def led_blink():
     GPIO.output(config.GPIO_PIN_ADDRESS, GPIO.LOW)
 
 def usage():
-    print ( "Usage: iothub_client_sample.py -p <protocol> -c <connectionstring>" )
+    print ( "Usage: iothub_client_sample.py -p <protocol> -c <connectionstring> -n <devicename>" )
     print ( "    protocol        : <amqp, amqp_ws, http, mqtt, mqtt_ws>" )
     print ( "    connectionstring: <HostName=<host_name>;DeviceId=<device_id>;SharedAccessKey=<device_key>>" )
+    print ( "    devicename: <name of the device for logging reasons" )
+
 
 def parse_iot_hub_name():
     m = re.search("HostName=(.*?)\.", CONNECTION_STRING)

@@ -7,7 +7,7 @@ class BME280SensorSimulator:
         pass
 
     def read_temperature(self):
-        return random.uniform(20, 30)
+        return random.uniform(25, 31)
 
     def read_humidity(self):
         return random.uniform(60, 80)
